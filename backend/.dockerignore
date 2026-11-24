@@ -1,0 +1,59 @@
+# Environment variables and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Testing and development
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Git and IDE configuration
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Local Azure configuration
+.azure/
+
+# Local application state
+state/
+vector-store-id.txt
+**/vector-store-id.txt
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Logs and temporary files
+**/*.log
+**/*.tmp
+**/*.bak
+
+# Build artifacts
+build/
+dist/
+**/*.egg-info/
+
+# Operating system files
+.DS_Store
+Thumbs.db
