@@ -1,4 +1,6 @@
-﻿from functools import lru_cache
+from functools import lru_cache
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,8 +13,47 @@ class Settings(BaseSettings):
 
     # Microsoft Foundry
     azure_openai_endpoint: str
-    model_deployment: str = "gpt-5.2"
+    model_deployment: str = "gpt-5-mini-2"
+    advanced_model_deployment: str = "gpt-5.2"
+    embedding_model_deployment: str = "text-embedding-3-small"
     foundry_project_endpoint: str = ""
+
+    # AI execution configuration
+    max_prompt_characters: int = Field(
+        default=8000,
+        ge=1,
+        le=32000
+    )
+
+    max_output_tokens: int = Field(
+        default=1024,
+        ge=1,
+        le=8192
+    )
+
+    ai_request_timeout: float = Field(
+        default=120.0,
+        ge=10.0,
+        le=300.0
+    )
+
+    ai_max_retries: int = Field(
+        default=0,
+        ge=0,
+        le=2
+    )
+
+    max_concurrent_requests: int = Field(
+        default=3,
+        ge=1,
+        le=10
+    )
+
+    # AI feature controls
+    store_ai_responses: bool = True
+    token_monitoring_enabled: bool = True
+    execution_metrics_enabled: bool = True
+    fine_tuning_enabled: bool = False
 
     # Managed Identity
     azure_client_id: str
@@ -66,8 +107,14 @@ class Settings(BaseSettings):
             ".table.core.windows.net"
         )
 
+    @property
+    def allowed_chat_models(self) -> tuple[str, ...]:
+        return tuple(dict.fromkeys((
+            self.model_deployment,
+            self.advanced_model_deployment
+        )))
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
