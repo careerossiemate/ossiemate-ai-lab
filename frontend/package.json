@@ -1,0 +1,19 @@
+﻿{
+    "name":  "ossiemate-ai-lab-frontend",
+    "version":  "0.1.0",
+    "private":  true,
+    "description":  "Ossiemate AI Lab frontend with Microsoft Entra authentication",
+    "type":  "module",
+    "scripts":  {
+                    "build":  "esbuild js/auth-ui.js --bundle --minify --platform=browser --format=esm --outfile=js/dist/auth.bundle.js"
+                },
+    "dependencies":  {
+                         "@azure/msal-browser":  "4.30.0"
+                     },
+    "devDependencies":  {
+                            "esbuild":  "^0.25.0"
+                        },
+    "engines":  {
+                    "node":  "\u003e=22"
+                }
+}

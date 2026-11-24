@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -18,6 +18,61 @@
         <a href="exercise06.html">Exercise 06</a>
     </nav>
 </header>
+
+<div class="auth-bar" id="auth-bar">
+
+    <div class="auth-information">
+
+        <p id="auth-status"
+           class="auth-status"
+           role="status">
+            Initialising authentication...
+        </p>
+
+        <p id="auth-profile"
+           class="auth-profile">
+            Public showcase available.
+        </p>
+
+        <p id="backend-status"
+           class="backend-status">
+            Checking backend configuration...
+        </p>
+
+    </div>
+
+    <div class="auth-actions">
+
+        <button id="sign-in-button"
+                class="auth-button"
+                type="button"
+                disabled>
+
+            <span class="microsoft-mark"
+                  aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+
+            Sign in with Microsoft
+
+        </button>
+
+        <button id="sign-out-button"
+                class="auth-button"
+                type="button"
+                hidden>
+
+            Sign Out
+
+        </button>
+
+    </div>
+
+</div>
+
 
 <main>
     <section class="hero">
@@ -105,5 +160,6 @@
     Ossiemate | Applied AI and Technology Solutions
 </footer>
 
+<script type="module" src="/js/dist/auth.bundle.js"></script>
 </body>
 </html>

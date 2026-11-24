@@ -50,3 +50,6 @@ Thumbs.db
 *.tfstate
 *.tfstate.*
 *.tfvars
+
+# Generated frontend files
+frontend/js/dist/

@@ -238,3 +238,106 @@ footer {
     color: #537264;
 }
 
+
+/* Microsoft authentication interface */
+
+.auth-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px 5%;
+    background: #e8f0eb;
+    border-bottom: 1px solid #c8d9ce;
+    color: #164b35;
+}
+
+.auth-information {
+    flex: 1;
+    min-width: 200px;
+    overflow-wrap: anywhere;
+}
+
+.auth-information p {
+    margin: 4px 0;
+}
+
+.auth-status {
+    font-weight: 700;
+}
+
+.auth-profile {
+    font-size: 14px;
+}
+
+.backend-status {
+    font-size: 12px;
+    color: #53675b;
+}
+
+.auth-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.auth-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #ffffff;
+    color: #242424;
+    border: 1px solid #9ca9a0;
+    border-radius: 5px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-button:hover:not(:disabled) {
+    background: #f2f5f3;
+}
+
+.auth-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-button[hidden] {
+    display: none;
+}
+
+.microsoft-mark {
+    display: grid;
+    grid-template-columns: repeat(2, 8px);
+    grid-template-rows: repeat(2, 8px);
+    gap: 2px;
+}
+
+.microsoft-mark span:nth-child(1) {
+    background: #f25022;
+}
+
+.microsoft-mark span:nth-child(2) {
+    background: #7fba00;
+}
+
+.microsoft-mark span:nth-child(3) {
+    background: #00a4ef;
+}
+
+.microsoft-mark span:nth-child(4) {
+    background: #ffb900;
+}
+
+@media (max-width: 600px) {
+    .auth-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
