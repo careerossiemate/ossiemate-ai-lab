@@ -160,12 +160,107 @@
     </section>
 
     <section id="status">
+
         <h2>Lab Status</h2>
+
         <div class="status-panel">
+
             <p>Showcase portal: Available</p>
-            <p>Live AI backend: Not yet configured</p>
+
+            <p>Backend connectivity: See status above</p>
+
             <p>Exercise demonstrations: Under development</p>
+
         </div>
+
+        <div id="diagnostics-panel"
+             class="diagnostics-panel"
+             hidden>
+
+            <h3>Infrastructure Diagnostics</h3>
+
+            <p>Validate connectivity to Azure services
+               using the cloud-hosted Python backend.</p>
+
+            <div class="diagnostics-grid">
+
+                <div class="diagnostic-item">
+
+                    <h4>Managed Identity</h4>
+
+                    <p>Azure passwordless authentication</p>
+
+                    <span id="diagnostic-identity"
+                          class="diagnostic-status"
+                          data-status="not_tested">
+                        Not tested
+                    </span>
+
+                </div>
+
+                <div class="diagnostic-item">
+
+                    <h4>Azure Blob Storage</h4>
+
+                    <p>Persistent file storage</p>
+
+                    <span id="diagnostic-blob"
+                          class="diagnostic-status"
+                          data-status="not_tested">
+                        Not tested
+                    </span>
+
+                </div>
+
+                <div class="diagnostic-item">
+
+                    <h4>Azure Table Storage</h4>
+
+                    <p>Persistent structured records</p>
+
+                    <span id="diagnostic-table"
+                          class="diagnostic-status"
+                          data-status="not_tested">
+                        Not tested
+                    </span>
+
+                </div>
+
+                <div class="diagnostic-item">
+
+                    <h4>Microsoft Foundry</h4>
+
+                    <p>AI model execution</p>
+
+                    <span id="diagnostic-foundry"
+                          class="diagnostic-status"
+                          data-status="not_tested">
+                        Not tested
+                    </span>
+
+                </div>
+
+            </div>
+
+            <button id="run-diagnostics"
+                    class="button"
+                    type="button"
+                    disabled>
+
+                Run Infrastructure Diagnostics
+
+            </button>
+
+            <p id="diagnostics-summary"
+               class="diagnostics-summary"
+               role="status">
+
+                Diagnostics have not been executed.
+
+            </p>
+
+        </div>
+
     </section>
 
 </main>

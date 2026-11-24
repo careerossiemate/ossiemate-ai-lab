@@ -1,4 +1,8 @@
-﻿import {
+import {
+    initializeDiagnosticsUI
+} from "./diagnostics.js";
+
+import {
     isBackendConfigured,
     getHealth,
     getCurrentUser
@@ -17,6 +21,8 @@ import {
 
 
 async function initializeAuthUI() {
+
+    initializeDiagnosticsUI(false);
 
     const status =
         document.getElementById("auth-status");
@@ -160,6 +166,8 @@ async function initializeAuthUI() {
 
                     const user = await getCurrentUser();
 
+                    initializeDiagnosticsUI(user.authorised === true);
+
                     backendStatus.textContent =
                         user.authorised === true
                             ? "Backend connected. User authorised."
@@ -197,4 +205,3 @@ async function initializeAuthUI() {
 
 
 initializeAuthUI();
-
