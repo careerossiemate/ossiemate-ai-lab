@@ -1,0 +1,52 @@
+﻿# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets.json
+local.settings.json
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+
+# Azure configuration
+.azure/
+.azuredevops/
+
+# Local application state
+vector-store-id.txt
+state/
+logs/
+*.log
+*.db
+*.sqlite3
+
+# Frontend dependencies
+node_modules/
+dist/
+build/
+
+# IDE configuration
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Terraform state (if used later)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
