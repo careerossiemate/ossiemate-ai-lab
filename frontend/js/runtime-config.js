@@ -1,12 +1,12 @@
-﻿export const runtimeConfig = Object.freeze({
+export const runtimeConfig = Object.freeze({
 
     applicationName: "Ossiemate AI Lab",
 
     environment: "development",
 
-    apiBaseUrl: "",
+    apiBaseUrl: "https://ca-ai103-backend.wittywave-5f5679ff.australiaeast.azurecontainerapps.io",
 
-    liveBackendEnabled: false,
+    liveBackendEnabled: true,
 
     requestTimeoutMs: 150000,
 
