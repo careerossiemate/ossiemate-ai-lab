@@ -1,4 +1,8 @@
 import {
+    initializeProgressUI
+} from "./progress.js";
+
+import {
     initializeDiagnosticsUI
 } from "./diagnostics.js";
 
@@ -23,6 +27,7 @@ import {
 async function initializeAuthUI() {
 
     initializeDiagnosticsUI(false);
+    initializeProgressUI(false);
 
     const status =
         document.getElementById("auth-status");
@@ -167,6 +172,7 @@ async function initializeAuthUI() {
                     const user = await getCurrentUser();
 
                     initializeDiagnosticsUI(user.authorised === true);
+                    initializeProgressUI(user.authorised === true);
 
                     backendStatus.textContent =
                         user.authorised === true

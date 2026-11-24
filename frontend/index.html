@@ -261,6 +261,161 @@
 
         </div>
 
+
+        <div id="progress-panel"
+             class="progress-panel"
+             hidden>
+
+            <h3>AI-103 Learning Progress</h3>
+
+            <p>Track your practical AI exercises
+               and learning outcomes.</p>
+
+            <div class="progress-grid">
+
+                <div class="progress-item">
+                    <h4>Exercise 03 - Conversational AI</h4>
+
+                    <progress id="progress-bar-03"
+                              aria-label="Exercise 03 progress"
+                              max="100"
+                              value="0"></progress>
+
+                    <p id="progress-label-03">
+                        0% - Not started
+                    </p>
+                </div>
+
+                <div class="progress-item">
+                    <h4>Exercise 04 - Intelligent Search</h4>
+
+                    <progress id="progress-bar-04"
+                              aria-label="Exercise 04 progress"
+                              max="100"
+                              value="0"></progress>
+
+                    <p id="progress-label-04">
+                        0% - Not started
+                    </p>
+                </div>
+
+                <div class="progress-item">
+                    <h4>Exercise 05 - Model Fine-tuning</h4>
+
+                    <progress id="progress-bar-05"
+                              aria-label="Exercise 05 progress"
+                              max="100"
+                              value="0"></progress>
+
+                    <p id="progress-label-05">
+                        0% - Not started
+                    </p>
+                </div>
+
+                <div class="progress-item">
+                    <h4>Exercise 06 - Responsible AI</h4>
+
+                    <progress id="progress-bar-06"
+                              aria-label="Exercise 06 progress"
+                              max="100"
+                              value="0"></progress>
+
+                    <p id="progress-label-06">
+                        0% - Not started
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="progress-form">
+
+                <h4>Update exercise progress</h4>
+
+                <label for="progress-exercise">
+                    Select exercise
+                </label>
+
+                <select id="progress-exercise" disabled>
+
+                    <option value="03">
+                        03 - Conversational AI
+                    </option>
+
+                    <option value="04">
+                        04 - Intelligent Search
+                    </option>
+
+                    <option value="05">
+                        05 - Model Fine-tuning
+                    </option>
+
+                    <option value="06">
+                        06 - Responsible AI
+                    </option>
+
+                </select>
+
+                <label for="progress-percentage">
+                    Completion percentage:
+                    <output id="progress-value"
+                            for="progress-percentage">0%</output>
+                </label>
+
+                <input id="progress-percentage"
+                       type="range"
+                       min="0"
+                       max="100"
+                       step="1"
+                       value="0"
+                       disabled>
+
+                <p>
+                    Status:
+                    <strong id="progress-status">
+                        Not started
+                    </strong>
+                </p>
+
+                <label for="progress-notes">
+                    Learning notes
+                </label>
+
+                <textarea id="progress-notes"
+                          rows="4"
+                          maxlength="2000"
+                          placeholder="Record learning outcomes and observations..."
+                          disabled></textarea>
+
+                <div class="progress-actions">
+
+                    <button id="save-progress"
+                            class="button"
+                            type="button"
+                            disabled>
+                        Save Progress
+                    </button>
+
+                    <button id="refresh-progress"
+                            class="button"
+                            type="button"
+                            disabled>
+                        Refresh Progress
+                    </button>
+
+                </div>
+
+                <p id="progress-summary"
+                   class="progress-summary"
+                   role="status">
+
+                    Progress has not been retrieved.
+
+                </p>
+
+            </div>
+
+        </div>
+
     </section>
 
 </main>

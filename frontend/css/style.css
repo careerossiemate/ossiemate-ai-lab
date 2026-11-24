@@ -451,3 +451,157 @@ footer {
         width: 100%;
     }
 }
+
+
+/* AI-103 Learning Progress Dashboard */
+
+.progress-panel {
+    margin-top: 28px;
+    padding: 24px;
+    background: #f5f7f5;
+    border: 1px solid #dce5df;
+    border-radius: 12px;
+}
+
+.progress-panel[hidden] {
+    display: none !important;
+}
+
+.progress-panel h3 {
+    color: #123b2c;
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.progress-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+}
+
+.progress-item {
+    background: #ffffff;
+    padding: 20px;
+    border: 1px solid #dce5df;
+    border-left: 4px solid #176b45;
+    border-radius: 8px;
+}
+
+.progress-item h4 {
+    color: #123b2c;
+    margin-bottom: 12px;
+}
+
+.progress-item progress {
+    display: block;
+    width: 100%;
+    height: 14px;
+    accent-color: #176b45;
+    margin: 12px 0;
+}
+
+.progress-item p {
+    color: #475569;
+    font-size: 14px;
+}
+
+.progress-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #ffffff;
+    padding: 24px;
+    border: 1px solid #dce5df;
+    border-radius: 8px;
+}
+
+.progress-form h4 {
+    color: #123b2c;
+    font-size: 20px;
+}
+
+.progress-form label {
+    font-weight: 600;
+    color: #334155;
+}
+
+.progress-form select,
+.progress-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    background: #ffffff;
+    color: #334155;
+}
+
+.progress-form textarea {
+    resize: vertical;
+}
+
+.progress-form input[type="range"] {
+    width: 100%;
+    accent-color: #176b45;
+}
+
+#progress-value,
+#progress-status {
+    color: #176b45;
+    font-weight: 600;
+}
+
+.progress-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.progress-actions .button {
+    background: #123b2c;
+    color: #facc15;
+    border: 1px solid #123b2c;
+    cursor: pointer;
+}
+
+#refresh-progress {
+    background: #ffffff;
+    color: #123b2c;
+}
+
+.progress-actions .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.progress-form :focus-visible {
+    outline: 3px solid #176b45;
+    outline-offset: 3px;
+}
+
+.progress-summary {
+    color: #334155;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .progress-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .progress-panel,
+    .progress-form {
+        padding: 16px;
+    }
+
+    .progress-actions {
+        flex-direction: column;
+    }
+
+    .progress-actions .button {
+        width: 100%;
+    }
+}
