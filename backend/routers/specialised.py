@@ -23,6 +23,8 @@ class Request(BaseModel):
     exercise: Literal['LG01','LG07','VS07']
     text: str = Field(default='', max_length=2000)
     target: Literal['en','fr','hi','mr','es','de','ja'] = 'fr'
+    source: Literal['auto','en','fr','hi','mr','es','de','ja'] = 'auto'
+    romanised: bool = False
     document: str = Field(default='', max_length=1400000)
 
 @router.get('/capabilities')
@@ -56,7 +58,15 @@ def run(body: Request, user=Depends(require_authorised_user)):
                     r = client.post(LANG+'/language/:analyze-text', params={'api-version':'2023-04-01'}, headers=headers, json={'kind':kind,'analysisInput':{'documents':[{'id':'1','text':body.text}]}})
                     r.raise_for_status(); result[kind]=r.json()
             elif body.exercise == 'LG07':
-                r=client.post(TRANS+'/translator/text/v3.0/translate',params={'api-version':'3.0','to':body.target},headers=headers,json=[{'Text':body.text}]); r.raise_for_status(); result=r.json()
+                text = body.text
+                params = {'api-version':'3.0','to':body.target}
+                if body.source != 'auto': params['from'] = body.source
+                if body.romanised:
+                    if body.source not in ('mr','hi'):
+                        raise HTTPException(422,'Select Marathi or Hindi for Romanised input.')
+                    r=client.post(TRANS+'/translator/text/v3.0/transliterate',params={'api-version':'3.0','language':body.source,'fromScript':'Latn','toScript':'Deva'},headers=headers,json=[{'Text':text}]); r.raise_for_status()
+                    text=r.json()[0]['text']
+                r=client.post(TRANS+'/translator/text/v3.0/translate',params=params,headers=headers,json=[{'Text':text}]); r.raise_for_status(); result=r.json()
             else:
                 r=client.post(DOC+'/documentintelligence/documentModels/prebuilt-layout:analyze',params={'api-version':'2024-11-30','pages':'1-2'},headers={**headers,'Content-Type':'application/octet-stream'},content=raw); r.raise_for_status()
                 location=r.headers.get('operation-location','')
