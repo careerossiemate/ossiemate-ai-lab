@@ -9,7 +9,7 @@ from shared.user_authorization import require_authorised_user
 from routers.expanded import reserve_service, LIMITS
 from routers.final_labs import model
 router=APIRouter(prefix='/api/remaining')
-LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1)})
+LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1),'a2ademo':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
 'AG04':'Create a Foundry IQ knowledge base connected to the Search index.',
@@ -120,4 +120,44 @@ def run(body:Request,user=Depends(require_authorised_user)):
             suffix=' HTTP '+str(status) if isinstance(status,int) else ''
             raise HTTPException(502,'AG08 execution: '+type(e).__name__+suffix) from None
         raise HTTPException(502,'Service execution failed') from None
+    finally: slots.release()
+
+
+# A bounded, authenticated A2A JSON-RPC 0.3-style teaching endpoint.
+# Not a full A2A server: no tasks, streaming, or independent deployment.
+@router.get('/a2a/card')
+def a2a_card(user=Depends(require_authorised_user)):
+    return {'protocolVersion':'0.3.0','name':'Lab Risk Advisor','description':'Single-turn risk advice','url':'https://ca-ai103-backend.wittywave-5f5679ff.australiaeast.azurecontainerapps.io/api/remaining/a2a/message','version':'1.0.0','preferredTransport':'JSONRPC','capabilities':{'streaming':False,'pushNotifications':False},'defaultInputModes':['text/plain'],'defaultOutputModes':['text/plain'],'skills':[{'id':'risk','name':'Risk advice','description':'Identify risks and mitigations','tags':['risk']}],'securitySchemes':{'bearer':{'type':'http','scheme':'bearer'}},'security':[{'bearer':[]}]}
+
+class A2APart(BaseModel):
+    kind: str = Field(max_length=10)
+    text: str = Field(min_length=1,max_length=1500)
+class A2AMessage(BaseModel):
+    kind: str = Field(max_length=10)
+    role: str = Field(max_length=10)
+    messageId: str = Field(min_length=1,max_length=80)
+    parts: list[A2APart] = Field(min_length=1,max_length=1)
+class A2AParams(BaseModel):
+    message: A2AMessage
+class A2ARequest(BaseModel):
+    jsonrpc: str = Field(max_length=5)
+    id: str = Field(min_length=1,max_length=80)
+    method: str = Field(max_length=30)
+    params: A2AParams
+
+@router.post('/a2a/message')
+def a2a_message(body:A2ARequest,user=Depends(require_authorised_user)):
+    from uuid import uuid4
+    from shared.foundry_client import get_foundry_client
+    from shared.config import get_settings
+    msg=body.params.message
+    if body.jsonrpc!='2.0' or body.method!='message/send' or msg.kind!='message' or msg.role!='user' or msg.parts[0].kind!='text':
+        return {'jsonrpc':'2.0','id':body.id,'error':{'code':-32602,'message':'Unsupported message format'}}
+    if not slots.acquire(False): raise HTTPException(429,'Service busy')
+    try:
+        reserve_service('global-a2a-budget','a2ademo')
+        response=get_foundry_client().responses.create(model=get_settings().model_deployment,input=msg.parts[0].text,instructions='Act as a risk advisor. Provide concise risk and mitigation advice. Identify uncertainty.',max_output_tokens=512,store=False)
+        return {'jsonrpc':'2.0','id':body.id,'result':{'kind':'message','role':'agent','messageId':uuid4().hex,'parts':[{'kind':'text','text':response.output_text}]}}
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(502,'A2A execution: '+type(e).__name__) from None
     finally: slots.release()
