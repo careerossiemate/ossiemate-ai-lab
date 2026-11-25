@@ -152,3 +152,5 @@ from routers.exercises import router as exercise_router
 app.include_router(exercise_router)
 from routers.specialised import router as specialised_router
 app.include_router(specialised_router)
+from routers.expanded import router as expanded_router
+app.include_router(expanded_router)

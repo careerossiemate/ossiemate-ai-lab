@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from shared.auth import get_azure_credential
 from shared.user_authorization import require_authorised_user
-from shared.controlled_execution import reserve
+from routers.expanded import reserve_service
 from shared.table_storage import get_table_client
 from shared.config import get_settings
 
@@ -48,7 +48,7 @@ def run(body: Request, user=Depends(require_authorised_user)):
     if not slots.acquire(blocking=False): raise HTTPException(429, 'Service busy.')
     start = perf_counter()
     try:
-        reserve(user['user_id'])
+        reserve_service(user['user_id'], {'LG01':'language','LG07':'translation','VS07':'document'}[body.exercise])
         token = get_azure_credential().get_token('https://cognitiveservices.azure.com/.default').token
         headers = {'Authorization': 'Bearer '+token}
         with httpx.Client(timeout=20, follow_redirects=False) as client:
@@ -68,7 +68,7 @@ def run(body: Request, user=Depends(require_authorised_user)):
                     text=r.json()[0]['text']
                 r=client.post(TRANS+'/translator/text/v3.0/translate',params=params,headers=headers,json=[{'Text':text}]); r.raise_for_status(); result=r.json()
             else:
-                r=client.post(DOC+'/documentintelligence/documentModels/prebuilt-layout:analyze',params={'api-version':'2024-11-30','pages':'1-2'},headers={**headers,'Content-Type':'application/octet-stream'},content=raw); r.raise_for_status()
+                r=client.post(DOC+'/documentintelligence/documentModels/prebuilt-layout:analyze',params={'api-version':'2024-11-30'},headers={**headers,'Content-Type':'application/octet-stream'},content=raw); r.raise_for_status()
                 location=r.headers.get('operation-location','')
                 from urllib.parse import urlsplit
                 u=urlsplit(location)
