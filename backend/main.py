@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
@@ -93,6 +95,8 @@ EXERCISES = [
     }
 ]
 
+
+EXERCISES.extend(json.loads(Path(__file__).with_name('expansion_catalog.json').read_text(encoding='utf-8')))
 
 @app.get("/")
 def root():

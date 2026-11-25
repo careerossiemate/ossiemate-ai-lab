@@ -43,13 +43,16 @@ def reserve(user_id):
             except ResourceExistsError:
                 pass
             continue
+        minute = datetime.now(timezone.utc).strftime('%Y%m%d%H%M')
+        if row['Minute'] > minute:
+            raise HTTPException(503, 'Clock mismatch; retry later.')
         count = int(row['Requests'])
         reserved = int(row['ReservedOutput'])
         minute_count = int(row['MinuteRequests']) if row['Minute'] == minute else 0
         if (count >= DAILY_REQUESTS or minute_count >= MINUTE_REQUESTS or
                 reserved + settings.max_output_tokens > DAILY_OUTPUT_BUDGET):
             raise HTTPException(429, 'AI usage limit reached.')
-        update = dict(row)
+        update = {k: row[k] for k in ("PartitionKey", "RowKey")}
         update.update(Requests=count+1, ReservedOutput=reserved+settings.max_output_tokens,
                       Minute=minute, MinuteRequests=minute_count+1)
         try:

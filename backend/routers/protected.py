@@ -1,4 +1,4 @@
-﻿from typing import Any, Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -32,7 +32,7 @@ router = APIRouter(
 
 class ProgressRequest(BaseModel):
 
-    exercise_id: Literal["03", "04", "05", "06"]
+    exercise_id: Literal["03", "04", "05", "06", "AG01", "AG02", "AG03", "AG04", "AG05", "AG06", "AG07", "AG08", "AG09", "AG10", "LG01", "LG02", "LG03", "LG04", "LG05", "LG06", "LG07", "VS01", "VS02", "VS03", "VS04", "VS05", "VS06", "VS07", "VS08"]
 
     status: Literal[
         "not_started",
@@ -197,4 +197,3 @@ def save_exercise_progress(
         "message": "Exercise progress saved.",
         "progress": record
     }
-
