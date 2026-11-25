@@ -154,3 +154,5 @@ from routers.specialised import router as specialised_router
 app.include_router(specialised_router)
 from routers.expanded import router as expanded_router
 app.include_router(expanded_router)
+from routers.vision_demo import router as vision_demo_router
+app.include_router(vision_demo_router)

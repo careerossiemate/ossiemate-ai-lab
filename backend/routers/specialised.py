@@ -83,7 +83,12 @@ def run(body: Request, user=Depends(require_authorised_user)):
         get_table_client(get_settings().metrics_table).create_entity({'PartitionKey':user['user_id'],'RowKey':'specialised-'+uuid4().hex,'ExerciseId':body.exercise,'DurationSeconds':duration,'Status':'succeeded'})
         return {'result':result,'duration_seconds':duration}
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(502, 'Azure service returned HTTP '+str(exc.response.status_code)) from None
+        code = 'Unknown'
+        try:
+            candidate = exc.response.json().get('error', {}).get('code', 'Unknown')
+            if isinstance(candidate, str) and candidate.isascii() and candidate.replace('_','').isalnum(): code = candidate[:80]
+        except (ValueError, AttributeError): pass
+        raise HTTPException(502, 'Azure service returned HTTP '+str(exc.response.status_code)+'; code: '+code) from None
     except httpx.RequestError:
         raise HTTPException(502,'Azure service connection failed.') from None
     finally: slots.release()
