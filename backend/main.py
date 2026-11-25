@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 
@@ -143,3 +143,6 @@ def get_exercises():
 from routers.protected import router as protected_router
 
 app.include_router(protected_router)
+
+from routers.exercises import router as exercise_router
+app.include_router(exercise_router)
