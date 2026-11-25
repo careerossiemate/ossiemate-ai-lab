@@ -1,3 +1,4 @@
+import { initializeSpecialised } from "./specialised.js";
 import { initializeExerciseUI } from "./exercise-ui.js";
 import {
     initializeProgressUI
@@ -174,7 +175,7 @@ async function initializeAuthUI() {
 
                     initializeDiagnosticsUI(user.authorised === true);
                     initializeProgressUI(user.authorised === true);
-    initializeExerciseUI(user.authorised === true);
+    initializeExerciseUI(user.authorised === true); initializeSpecialised(user.authorised === true);
 
                     backendStatus.textContent =
                         user.authorised === true

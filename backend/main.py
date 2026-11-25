@@ -150,3 +150,5 @@ app.include_router(protected_router)
 
 from routers.exercises import router as exercise_router
 app.include_router(exercise_router)
+from routers.specialised import router as specialised_router
+app.include_router(specialised_router)
