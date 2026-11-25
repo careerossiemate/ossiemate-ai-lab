@@ -110,7 +110,14 @@ def run(body:Request,user=Depends(require_authorised_user)):
                 result={'status':r.status_code,'operation_location':r.headers.get('operation-location'),'scope':'Experimental analyzer submission only; API/analyzer compatibility unverified. No polling or multimodal extraction implemented.'}
         result['duration_seconds']=round(perf_counter()-start,3); return result
     except HTTPException: raise
-    except (ValueError,TypeError,AttributeError): raise HTTPException(422,'Invalid input') from None
+    except (ValueError,TypeError,AttributeError) as e:
+        if eid=='AG08': raise HTTPException(502,'AG08 SDK error: '+type(e).__name__) from None
+        raise HTTPException(422,'Invalid input') from None
     except httpx.HTTPStatusError as e: raise HTTPException(502,'Azure HTTP '+str(e.response.status_code)) from None
-    except Exception: raise HTTPException(502,'Service execution failed') from None
+    except Exception as e:
+        if eid=='AG08':
+            status=getattr(e,'status_code',None)
+            suffix=' HTTP '+str(status) if isinstance(status,int) else ''
+            raise HTTPException(502,'AG08 execution: '+type(e).__name__+suffix) from None
+        raise HTTPException(502,'Service execution failed') from None
     finally: slots.release()

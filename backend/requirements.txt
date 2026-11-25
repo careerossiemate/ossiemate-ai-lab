@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
-openai
-azure-identity
+openai==3.59.0
+azure-identity==1.27.0
 azure-storage-blob
 azure-data-tables
 azure-ai-projects>=2.0,<3
@@ -13,5 +13,5 @@ python-multipart
 httpx
 PyJWT[crypto]
 mcp>=1.9,<2
-agent-framework-core
-agent-framework-openai
+agent-framework-core==1.26.0
+agent-framework-openai==1.18.2

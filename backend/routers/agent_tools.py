@@ -18,11 +18,11 @@ async def mcp_lookup(prompt):
 
 async def framework_run(prompt):
     from agent_framework import Agent
-    from agent_framework.openai import OpenAIChatClient
+    from agent_framework.openai import OpenAIResponsesClient
     from openai import AsyncOpenAI
     settings = get_settings()
     async with AsyncOpenAI(base_url=settings.azure_openai_endpoint, api_key=get_foundry_token_provider(), timeout=60, max_retries=0) as client:
-        chat = OpenAIChatClient(async_client=client, model=settings.model_deployment)
+        chat = OpenAIResponsesClient(async_client=client, model=settings.model_deployment)
         agent = Agent(client=chat, name="LabAdvisor", instructions="Answer concisely. Identify uncertainty.", default_options={"max_tokens":512})
         result = await agent.run(prompt)
-        return {"response":str(result), "scope":"Microsoft Agent Framework single-turn agent"}
+        return {"response":str(result), "scope":"Microsoft Agent Framework single-turn agent via Responses API"}
