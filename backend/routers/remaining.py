@@ -9,7 +9,7 @@ from shared.user_authorization import require_authorised_user
 from routers.expanded import reserve_service, LIMITS
 from routers.final_labs import model
 router=APIRouter(prefix='/api/remaining')
-LIMITS.update({'search':(10,2),'cu':(5,1)})
+LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
 'AG01':'Create a native agent in the Foundry project and verify project permissions.',
@@ -21,7 +21,6 @@ GUIDES={
 'LG03':'Deploy a supported generative audio model after pricing approval.',
 'LG05':'Enable a supported Speech MCP endpoint and authenticate its tools.',
 'LG06':'Validate Voice Live model availability and streaming session authentication.',
-'VS02':'Approve image model deployment and inference pricing.',
 'VS03':'Confirm Sora model availability and approve video generation pricing.',
 }
 class Request(BaseModel):
@@ -35,16 +34,28 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
-        if eid=='05':
+        if eid=='VS02':
+            if not body.prompt.strip(): raise HTTPException(422,'Enter an image prompt')
+            reserve_service('global-image-budget','flux')
+            with httpx.Client(timeout=110,headers=headers('https://cognitiveservices.azure.com/.default')) as c:
+                r=c.post('https://ai103-agent-lab.services.ai.azure.com/openai/v1/images/generations',params={'api-version':'preview'},json={'model':'flux-lab','prompt':body.prompt,'n':1,'size':'1024x1024','response_format':'b64_json'})
+                r.raise_for_status()
+                encoded=r.json()['data'][0]['b64_json']
+                raw=base64.b64decode(encoded,validate=True)
+                if len(raw)>8000000: raise HTTPException(502,'Image exceeds display limit')
+                mime='image/png' if raw.startswith(b'\x89PNG\r\n\x1a\n') else 'image/jpeg' if raw.startswith(b'\xff\xd8\xff') else None
+                if not mime: raise HTTPException(502,'Unexpected image format')
+                result={'image':encoded,'mime':mime,'deployment':'flux-lab','scope':'FLUX text-to-image; three attempts per UTC day across portal users.'}
+        elif eid=='05':
             rows=[json.loads(line) for line in body.prompt.splitlines() if line.strip()]
             valid=0
             for row in rows:
