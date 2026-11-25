@@ -159,3 +159,6 @@ app.include_router(vision_demo_router)
 
 from routers.final_labs import router as final_labs_router
 app.include_router(final_labs_router)
+
+from routers.remaining import router as remaining_router
+app.include_router(remaining_router)
