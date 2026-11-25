@@ -51,7 +51,7 @@ switch($Action){
  'RestoreTest' {$before=Get-Progress; Validate-Lab; Stop-Lab; Start-Lab; $after=Get-Progress; if($before -ne $after){throw 'Progress changed during restoration'}; Write-Host 'Progress persistence comparison passed'; return}
 }
 $a=Get-App; $c=$a.properties.template.containers[0]
-if($c.image -ne 'acrossiemateailab.azurecr.io/ai103-backend@sha256:a27938b9277731a173b3c9a14b7e510f00261a1434dbbb53a5e4dd467e58b477'){throw 'Unexpected image; verify deployment first'}
+if($c.image -ne 'acrossiemateailab.azurecr.io/ai103-backend@sha256:019b738dca83a1f2841978ec9a84051280d26eee3b16836cb08130473f53a4ed'){throw 'Unexpected image; verify deployment first'}
 $vars=@($c.env | ForEach-Object {if($_.secretRef){throw 'Secret references require manual restoration'}; "$($_.name)=$($_.value)"})
 if($vars -notcontains 'MODEL_DEPLOYMENT=gpt-5-mini-2' -or $vars -notcontains 'LIVE_CHAT_ENABLED=false'){throw 'Unexpected model or live mode'}
 & git -C $root check-ignore -- state/lab-runtime-v2.json | Out-Null

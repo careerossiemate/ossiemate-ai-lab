@@ -9,10 +9,9 @@ from shared.user_authorization import require_authorised_user
 from routers.expanded import reserve_service, LIMITS
 from routers.final_labs import model
 router=APIRouter(prefix='/api/remaining')
-LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1)})
+LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
-'AG01':'Create a native agent in the Foundry project and verify project permissions.',
 'AG03':'Configure an approved MCP server and verify tool discovery and invocation.',
 'AG04':'Create a Foundry IQ knowledge base connected to the Search index.',
 'AG06':'Publish a native agent to Teams after tenant administrator approval.',
@@ -34,16 +33,37 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
-        if eid=='VS02':
+        if eid=='AG01':
+            if not body.prompt.strip(): raise HTTPException(422,'Enter an agent question')
+            reserve_service('global-agent-budget','nativeagent')
+            from azure.ai.projects import AIProjectClient
+            from azure.ai.projects.models import PromptAgentDefinition
+            from uuid import uuid4
+            name='ossiemate-lab-'+uuid4().hex[:16]
+            with AIProjectClient(endpoint='https://ai103-agent-lab.services.ai.azure.com/api/projects/AI103-agent-lab',credential=get_azure_credential(),retry_total=0,connection_timeout=10,read_timeout=45) as project:
+                agent=project.agents.create_version(agent_name=name,definition=PromptAgentDefinition(model='gpt-5-mini-2',instructions='Answer the learning question concisely. Do not invent facts.'))
+                cleanup='pending'
+                try:
+                    with project.get_openai_client() as client:
+                        response=client.with_options(timeout=60,max_retries=0).responses.create(input=body.prompt,max_output_tokens=512,extra_body={'agent_reference':{'name':agent.name,'type':'agent_reference'}})
+                        result={'response':response.output_text,'agent_name':agent.name,'version':str(agent.version),'scope':'Native Foundry prompt agent, single turn','usage':response.usage.model_dump() if response.usage else None}
+                finally:
+                    try:
+                        project.agents.delete_version(agent_name=agent.name,agent_version=agent.version)
+                        cleanup='version deleted'
+                    except Exception:
+                        cleanup='Version cleanup failed; inspect Foundry agent '+name
+                result['cleanup']=cleanup
+        elif eid=='VS02':
             if not body.prompt.strip(): raise HTTPException(422,'Enter an image prompt')
             reserve_service('global-image-budget','flux')
             with httpx.Client(timeout=110,headers=headers('https://cognitiveservices.azure.com/.default')) as c:

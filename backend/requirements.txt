@@ -1,10 +1,10 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 openai
 azure-identity
 azure-storage-blob
 azure-data-tables
-azure-ai-projects
+azure-ai-projects>=2.0,<3
 azure-ai-contentsafety
 python-dotenv
 pydantic
