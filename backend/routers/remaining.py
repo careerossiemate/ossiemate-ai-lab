@@ -9,13 +9,11 @@ from shared.user_authorization import require_authorised_user
 from routers.expanded import reserve_service, LIMITS
 from routers.final_labs import model
 router=APIRouter(prefix='/api/remaining')
-LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1)})
+LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
-'AG03':'Configure an approved MCP server and verify tool discovery and invocation.',
 'AG04':'Create a Foundry IQ knowledge base connected to the Search index.',
 'AG06':'Publish a native agent to Teams after tenant administrator approval.',
-'AG08':'Install and validate the Microsoft Agent Framework SDK against the project.',
 'AG10':'Configure authenticated remote A2A agent cards and message endpoints.',
 'LG03':'Deploy a supported generative audio model after pricing approval.',
 'LG05':'Enable a supported Speech MCP endpoint and authenticate its tools.',
@@ -33,16 +31,26 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
-        if eid=='AG01':
+        if eid in ('AG03','AG08'):
+            if not body.prompt.strip(): raise HTTPException(422,'Enter a question')
+            import asyncio
+            from routers.agent_tools import mcp_lookup, framework_run
+            reserve_service('global-agent-tools-budget','mcpdemo' if eid=='AG03' else 'framework')
+            if eid=='AG03':
+                result=asyncio.run(asyncio.wait_for(mcp_lookup(body.prompt),timeout=20))
+                result['scope']='Real MCP discovery and invocation over stdio; fixed tool selection, not model-directed.'
+            else:
+                result=asyncio.run(asyncio.wait_for(framework_run(body.prompt),timeout=90))
+        elif eid=='AG01':
             if not body.prompt.strip(): raise HTTPException(422,'Enter an agent question')
             reserve_service('global-agent-budget','nativeagent')
             from azure.ai.projects import AIProjectClient
