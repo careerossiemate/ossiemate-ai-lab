@@ -24,6 +24,7 @@ class Request(BaseModel):
     prompt:str=Field(default='',max_length=2000)
     image:str=Field(default='',max_length=700000)
     mime:str=Field(default='image/png',max_length=30)
+    mode:str=Field(default='handoff',max_length=20)
 
 def headers(scope):
     return {'Authorization':'Bearer '+get_azure_credential().get_token(scope).token}
@@ -57,8 +58,10 @@ def run(body:Request,user=Depends(require_authorised_user)):
             if not body.prompt.strip(): raise HTTPException(422,'Enter a planning problem')
             reserve_service('global-framework-multi','framework')
             import asyncio
-            from routers.package10 import multi_agent
-            result=asyncio.run(asyncio.wait_for(multi_agent(body.prompt),110))
+            from routers.package10 import multi_agent, native_workflow
+            if body.mode not in ('handoff','native'): raise HTTPException(422,'Invalid orchestration mode')
+            fn=native_workflow if body.mode=='native' else multi_agent
+            result=asyncio.run(asyncio.wait_for(fn(body.prompt),110))
         elif eid=='LG05':
             if not body.prompt.strip(): raise HTTPException(422,'Enter speech text')
             reserve_service('global-speech-mcp','speechmcp')
@@ -121,15 +124,16 @@ def run(body:Request,user=Depends(require_authorised_user)):
             from routers.package10 import hybrid_search
             result=hybrid_search(body.prompt)
         else:
-            reserve_service(uid,'cu')
             raw=base64.b64decode(body.image,validate=True)
-            if len(raw)>500000 or not ((body.mime=='image/png' and raw.startswith(b'\x89PNG\r\n\x1a\n')) or (body.mime=='image/jpeg' and raw.startswith(b'\xff\xd8\xff'))): raise HTTPException(422,'Use PNG or JPEG under 500 KB')
-            endpoint='https://ai103-agent-lab.services.ai.azure.com'; analyzer='prebuilt-imageSearch'; params={'api-version':'2025-11-01'}
+            from routers.package12 import choose_analyzer
+            analyzer,options=choose_analyzer(eid,body.mime,raw)
+            reserve_service('global-cu-budget','cu')
+            endpoint='https://ai103-agent-lab.services.ai.azure.com'; params={'api-version':'2025-11-01',**options}
             with httpx.Client(timeout=20,headers=headers('https://cognitiveservices.azure.com/.default')) as c:
                 r=c.post(endpoint+'/contentunderstanding/analyzers/'+analyzer+':analyzeBinary',params=params,headers={'Content-Type':'application/octet-stream'},content=raw); r.raise_for_status()
                 location=r.headers.get('operation-location')
                 if r.status_code==200:
-                    result={'analysis':r.json(),'scope':'Image analysis; analyzer compatibility pending functional test'}
+                    result={'analysis':r.json(),'analyzer':analyzer,'scope':'Modality-specific analysis; compatibility pending functional test'}
                 else:
                     import time
                     target=httpx.URL(location or '')
@@ -140,7 +144,7 @@ def run(body:Request,user=Depends(require_authorised_user)):
                         time.sleep(5)
                         poll=c.get(target,timeout=10); poll.raise_for_status(); payload=poll.json(); state=str(payload.get('status','')).lower()
                         if state=='succeeded':
-                            result={'analysis':payload,'scope':'Image analysis with asynchronous result retrieval'}; break
+                            result={'analysis':payload,'analyzer':analyzer,'scope':'Modality-specific analysis with asynchronous result retrieval'}; break
                         if state in ('failed','canceled','cancelled'): raise HTTPException(502,'Analyzer operation failed')
                     else: raise HTTPException(504,'Analyzer polling timed out; no automatic resubmission')
         result['duration_seconds']=round(perf_counter()-start,3); return result
