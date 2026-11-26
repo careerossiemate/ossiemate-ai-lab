@@ -9,14 +9,13 @@ from shared.user_authorization import require_authorised_user
 from routers.expanded import reserve_service, LIMITS
 from routers.final_labs import model
 router=APIRouter(prefix='/api/remaining')
-LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1),'a2ademo':(3,1)})
+LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1),'a2ademo':(3,1),'speechmcp':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
 
 'AG06':'Publish a native agent to Teams after tenant administrator approval.',
 'AG10':'Configure authenticated remote A2A agent cards and message endpoints.',
 'LG03':'Deploy a supported generative audio model after pricing approval.',
-'LG05':'Enable a supported Speech MCP endpoint and authenticate its tools.',
 'LG06':'Validate Voice Live model availability and streaming session authentication.',
 'VS03':'Confirm Sora model availability and approve video generation pricing.',
 }
@@ -31,13 +30,13 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['AG04','AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['LG05','AG04','AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('AG04','AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('LG05','AG04','AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
         if eid=='AG04':
@@ -45,7 +44,21 @@ def run(body:Request,user=Depends(require_authorised_user)):
             with httpx.Client(timeout=20,headers=headers('https://search.azure.com/.default')) as c:
                 r=c.get('https://ossiemate-search-a37bf3fc.search.windows.net/knowledgebases',params={'api-version':'2025-11-01-preview'})
                 r.raise_for_status()
-                result={'knowledge_bases':[x.get('name') for x in r.json().get('value',[])], 'scope':'Read-only native knowledge base discovery; no knowledge base created or retrieval executed.'}
+                names=[x.get('name') for x in r.json().get('value',[]) if x.get('name')]
+                result={'knowledge_bases':names,'scope':'Native knowledge base discovery'}
+                if body.prompt.strip():
+                    if len(names)!=1: raise HTTPException(409,'Retrieval requires exactly one existing knowledge base; no resources created.')
+                    import re
+                    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,127}',names[0]): raise HTTPException(502,'Invalid knowledge base name')
+                    r=c.post('https://ossiemate-search-a37bf3fc.search.windows.net/knowledgebases/'+names[0]+'/retrieve',params={'api-version':'2025-11-01-preview'},json={'messages':[{'role':'user','content':[{'type':'text','text':body.prompt}]}]})
+                    r.raise_for_status()
+                    result={'knowledge_base':names[0],'retrieval':r.json(),'scope':'Native retrieval API; existing knowledge base only, no agent binding.'}
+        elif eid=='LG05':
+            if not body.prompt.strip(): raise HTTPException(422,'Enter speech text')
+            reserve_service('global-speech-mcp','speechmcp')
+            import asyncio
+            from routers.speech_mcp import invoke
+            result=asyncio.run(asyncio.wait_for(invoke(body.prompt[:500]),timeout=65))
         elif eid in ('AG03','AG08'):
             if not body.prompt.strip(): raise HTTPException(422,'Enter a question')
             import asyncio
