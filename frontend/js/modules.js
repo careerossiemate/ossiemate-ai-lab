@@ -43,6 +43,13 @@ function renderUsage(root){
  const d=el('section','',root);d.style.cssText='border:1px solid #c8d9cf;border-radius:12px;padding:20px;margin:16px 0';
  el('h2','Usage and budget overview',d);el('p','Recorded personal usage and shared multimedia reservations. Not actual Azure billing.',d);
  const b=el('button','Refresh usage',d),o=el('div','',d);
+ const cb=el('button','Refresh Azure actual costs',d),co=el('div','',d);
+ cb.onclick=async()=>{cb.disabled=true;co.textContent='Loading Azure Cost Management';try{const r=await call('/api/remaining/package13/cost');co.textContent='';
+ el('p','Reported month-to-date costs: '+(Object.entries(r.reported_totals).map(([c,v])=>c+' '+v.toFixed(2)).join(', ')||'Unavailable'),co);
+ for(const g of r.groups)el('p',g.group+': '+g.status+' '+Object.entries(g.totals).map(([c,v])=>c+' '+v.toFixed(2)).join(', '),co);
+ el('p',(r.complete?'All configured groups reported. ':'Partial cost data. ')+r.scope,co);el('p','Retrieved '+r.as_of_utc,co);
+ }catch(e){co.textContent=e.message;}finally{cb.disabled=false;}};
+
  b.onclick=async()=>{b.disabled=true;o.textContent='Loading';try{const r=await call('/api/remaining/package11/usage');o.textContent='';
  for(const [k,v] of [['Recorded runs',r.recorded_runs],['Input tokens',r.recorded_input_tokens],['Output tokens',r.recorded_output_tokens],['Recorded execution seconds',r.recorded_duration_seconds],['Monthly budget target (AUD)',r.monthly_budget_aud],['Video allowance target (AUD)',r.video_allowance_aud]])el('p',k+': '+v,o);
  for(const q of r.multimedia_quotas)el('p',q.service+' ('+q.period_utc+' UTC): '+q.reserved_attempts+' / '+q.limit+' reserved',o);

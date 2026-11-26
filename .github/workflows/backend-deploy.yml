@@ -1,0 +1,76 @@
+name: Controlled backend deployment
+on:
+  workflow_dispatch:
+    inputs:
+      expected_image:
+        description: Current deployed image including sha256 digest (compare-and-set guard)
+        required: true
+        type: string
+      confirmation:
+        description: Type DEPLOY-DEVELOP
+        required: true
+        type: string
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: ai103-develop-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/develop' && inputs.confirmation == 'DEPLOY-DEVELOP' && vars.AI103_DEPLOY_ENABLED == 'true'
+    environment: ai103-develop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AI103_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AI103_AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AI103_AZURE_SUBSCRIPTION_ID }}
+      - name: Validate current target
+        env:
+          EXPECTED: ${{ inputs.expected_image }}
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id -o tsv)" = a37bf3fc-3e0b-46ca-bdf7-defade9c9e93
+          [[ "$EXPECTED" =~ ^acrossiemateailab\.azurecr\.io/ai103-backend@sha256:[a-f0-9]{64}$ ]]
+          test "$(az containerapp show -g rg-ai103-runtime -n ca-ai103-backend --query 'properties.template.containers[0].image' -o tsv)" = "$EXPECTED"
+      - name: Build and push immutable image
+        id: build
+        run: |
+          set -euo pipefail
+          az acr login -n acrossiemateailab
+          tag="acrossiemateailab.azurecr.io/ai103-backend:ci-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker build -t "$tag" backend
+          docker run --rm --entrypoint python "$tag" -m compileall -q /app
+          docker push "$tag"
+          digest=$(az acr repository show -n acrossiemateailab --image "${tag#*/}" --query digest -o tsv)
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "image=acrossiemateailab.azurecr.io/ai103-backend@$digest" >> "$GITHUB_OUTPUT"
+      - name: Deploy and validate or restore previous image
+        env:
+          EXPECTED: ${{ inputs.expected_image }}
+          IMAGE: ${{ steps.build.outputs.image }}
+        run: |
+          set -euo pipefail
+          app() { az containerapp "$@" -g rg-ai103-runtime -n ca-ai103-backend; }
+          test "$(app show --query 'properties.template.containers[0].image' -o tsv)" = "$EXPECTED"
+          host=$(app show --query properties.configuration.ingress.fqdn -o tsv)
+          test "$host" = ca-ai103-backend.wittywave-5f5679ff.australiaeast.azurecontainerapps.io
+          rollback() { echo 'Deployment failed; restoring previous image'; app update --image "$EXPECTED" -o none; }
+          trap rollback ERR
+          app update --image "$IMAGE" -o none
+          ready=false
+          for i in {1..40}; do
+            current=$(app show -o json)
+            if jq -e --arg image "$IMAGE" '.properties | .template.containers[0].image == $image and .latestRevisionName == .latestReadyRevisionName and .provisioningState == "Succeeded"' <<< "$current" >/dev/null && curl -fsS --max-time 20 "https://$host/api/info" | jq -e '.exercise_count == 29 and .live_ai_enabled == false' >/dev/null; then ready=true; break; fi
+            sleep 15
+          done
+          test "$ready" = true
+          for path in /api/auth/me /api/remaining/capabilities /api/remaining/package13/cost; do
+            test "$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "https://$host$path")" = 401
+          done
+          trap - ERR
+          echo "Deployed $IMAGE. Reconcile local lifecycle state before Stop/Start." >> "$GITHUB_STEP_SUMMARY"

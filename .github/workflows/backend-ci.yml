@@ -19,5 +19,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m compileall -q backend
+      - run: python -m unittest discover -s backend/tests -p test_package13_cost.py
       - run: docker build -t ai103-backend:ci backend
       - run: docker run --rm --entrypoint python ai103-backend:ci -m compileall -q /app
