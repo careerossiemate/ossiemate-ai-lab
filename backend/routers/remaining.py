@@ -217,3 +217,5 @@ def external_readiness(exercise: str, user=Depends(require_authorised_user)):
 
 # Register package 8 routes after router initialization.
 from routers import package8
+
+from routers import package11
