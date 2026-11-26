@@ -15,6 +15,7 @@ from routers.remaining import router, headers
 import os
 ACCOUNT='ossiemate-ai103-eastus2'
 BASE=f'https://{ACCOUNT}.services.ai.azure.com/providers/falai/v1/minimax/h3-max-turbo'
+VIDEO_DEPLOYMENT=os.getenv('PACKAGE9_VIDEO_DEPLOYMENT','Fal-MiniMax-H3-Max-Turbo')
 TABLE='LabConfiguration'
 CONTAINER='demonstration-results'
 slots=BoundedSemaphore(1)
@@ -104,16 +105,13 @@ def voice(b:Input,user=Depends(require_authorised_user)):
 
 @router.post('/package8/video')
 def video(b:Input,user=Depends(require_authorised_user)):
-    if os.getenv('PACKAGE8_VIDEO_ENABLED','false').lower() != 'true': raise HTTPException(503,'VS03 deployment pending; video generation disabled')
+    if not VIDEO_DEPLOYMENT: raise HTTPException(503,'VS03 deployment unavailable')
     if not b.prompt.strip(): raise HTTPException(422,'Enter a synthetic demonstration prompt')
     if not slots.acquire(False): raise HTTPException(429,'Busy')
     try:
-        data={'model':'video-lab','prompt':b.prompt,'duration':5,'resolution':'480P','prompt_expansion_mode':'disabled'}
+        data={'model':VIDEO_DEPLOYMENT,'prompt':b.prompt,'duration':5,'resolution':'480P','prompt_expansion_mode':'disabled','aspect_ratio':'16:9'}
         route='text-to-video'
-        if b.image:
-            raw=base64.b64decode(b.image,validate=True)
-            if b.mime not in ('image/png','image/jpeg') or len(raw)>500000: raise HTTPException(422,'Unsupported image')
-            data['image_url']='data:'+b.mime+';base64,'+b.image;route='image-to-video'
+        if b.image: raise HTTPException(422,'Image-to-video is deferred until input transport is verified')
         # Conservative allocation AUD 1 per attempted 5-second generation; no refunds.
         reserve('video-day',2,now().strftime('%Y%m%d'));reserve('video-month',5,now().strftime('%Y%m'))
         key=uuid4().hex; uid=user['user_id']
@@ -143,13 +141,14 @@ def status(key:str,user=Depends(require_authorised_user)):
             if result.get('status')!='COMPLETED': return {'job':key,'status':result.get('status','unknown')}
             result=checked(c.get(BASE+'/requests/'+rid,headers=auth()))
             url=httpx.URL(result['video']['url'])
-            if url.scheme!='https' or not (url.host=='fal.media' or url.host.endswith('.fal.media')) or url.port not in (None,443): raise HTTPException(502,'Unexpected video download host')
+            if url.scheme!='https' or not (url.host==f'{ACCOUNT}.services.ai.azure.com' or url.host=='fal.media' or url.host.endswith('.fal.media')) or url.port not in (None,443): raise HTTPException(502,'Unexpected video download host')
             buf=bytearray()
-            with c.stream('GET',url) as r:
-                if not r.is_success: raise HTTPException(502,'Video download failed')
+            with c.stream('GET',url,headers=auth() if url.host==f'{ACCOUNT}.services.ai.azure.com' else {}) as r:
+                if not r.is_success: raise HTTPException(502,'Video download failed; redirects are not followed')
                 for chunk in r.iter_bytes():
                     buf.extend(chunk)
                     if len(buf)>15000000: raise HTTPException(502,'Video exceeds storage limit')
+            if len(buf)<12 or buf[4:8]!=b'ftyp': raise HTTPException(502,'Provider did not return an MP4 file')
             upload_blob(CONTAINER,path,bytes(buf),'video/mp4',overwrite=True)
             upsert_record(TABLE,uid,key,{'State':'completed'})
             return {'job':key,'status':'completed','video':base64.b64encode(buf).decode()}

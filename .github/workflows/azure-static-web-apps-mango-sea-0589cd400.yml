@@ -66,6 +66,7 @@ jobs:
           mkdir -p frontend-deploy/js/dist
 
           cp frontend/index.html frontend-deploy/
+          cp frontend/privacy.html frontend/terms.html frontend-deploy/
 
           cp -r frontend/css frontend-deploy/
 

@@ -13,7 +13,7 @@ LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'fram
 slots=BoundedSemaphore(1)
 GUIDES={
 
-'AG06':'Publish a native agent to Teams after tenant administrator approval.',
+'AG06':'Agent published for personal use; open Teams to complete installation and later testing.',
 'AG10':'Configure authenticated remote A2A agent cards and message endpoints.',
 'LG03':'Use /api/remaining/package8/audio.',
 'LG06':'Use /api/remaining/package8/voice.',
@@ -126,7 +126,22 @@ def run(body:Request,user=Depends(require_authorised_user)):
             endpoint='https://ai103-agent-lab.services.ai.azure.com'; analyzer='prebuilt-imageSearch'; params={'api-version':'2025-11-01'}
             with httpx.Client(timeout=20,headers=headers('https://cognitiveservices.azure.com/.default')) as c:
                 r=c.post(endpoint+'/contentunderstanding/analyzers/'+analyzer+':analyzeBinary',params=params,headers={'Content-Type':'application/octet-stream'},content=raw); r.raise_for_status()
-                result={'status':r.status_code,'operation_location':r.headers.get('operation-location'),'scope':'Experimental analyzer submission only; API/analyzer compatibility unverified. No polling or multimodal extraction implemented.'}
+                location=r.headers.get('operation-location')
+                if r.status_code==200:
+                    result={'analysis':r.json(),'scope':'Image analysis; analyzer compatibility pending functional test'}
+                else:
+                    import time
+                    target=httpx.URL(location or '')
+                    if target.scheme!='https' or target.host!='ai103-agent-lab.services.ai.azure.com' or target.port not in (None,443) or not target.path.startswith('/contentunderstanding/'):
+                        raise HTTPException(502,'Unexpected operation URL')
+                    deadline=perf_counter()+60
+                    while perf_counter()<deadline:
+                        time.sleep(5)
+                        poll=c.get(target,timeout=10); poll.raise_for_status(); payload=poll.json(); state=str(payload.get('status','')).lower()
+                        if state=='succeeded':
+                            result={'analysis':payload,'scope':'Image analysis with asynchronous result retrieval'}; break
+                        if state in ('failed','canceled','cancelled'): raise HTTPException(502,'Analyzer operation failed')
+                    else: raise HTTPException(504,'Analyzer polling timed out; no automatic resubmission')
         result['duration_seconds']=round(perf_counter()-start,3); return result
     except HTTPException: raise
     except (ValueError,TypeError,AttributeError) as e:
@@ -190,14 +205,14 @@ def a2a_message(body:A2ARequest,user=Depends(require_authorised_user)):
 @router.get('/external-readiness/{exercise}')
 def external_readiness(exercise: str, user=Depends(require_authorised_user)):
     details = {
-        'AG06': {'required': 'Microsoft 365 tenant publishing approval and native agent publication', 'next': 'Verify tenant policy in Microsoft 365 admin center and publish from Foundry only after approval.'},
+        'AG06': {'required': 'Teams installation and legal URL correction', 'next': 'Open Teams and locate Ossiemate-Teams-Assistant; publication reported by administrator.'},
         'LG03': {'required': 'Approved audio-capable model deployment', 'next': 'Check model catalog and deployment SKU; Azure Speech F0 is not a generative audio model.'},
         'LG06': {'required': 'Approved Voice Live model and streaming authentication', 'next': 'Verify model availability, pricing and session authentication before enabling microphone streaming.'},
-        'VS03': {'required': 'Approved video-capable model deployment', 'next': 'Verify regional model availability and per-second pricing before submitting a video job.'},
+        'VS03': {'required': 'Authenticated functional test', 'next': 'Use the video job interface; MiniMax deployment provisioned.'},
     }
     if exercise not in details:
         raise HTTPException(404, 'Unknown external exercise')
-    return {'exercise': exercise, 'status': 'blocked_pending_approval_or_compatibility', 'live_execution': False, 'inference_performed': False, **details[exercise]}
+    return {'exercise': exercise, 'status': 'publication_reported' if exercise=='AG06' else 'application_integration_available', 'live_execution': False, 'inference_performed': False, **details[exercise]}
 
 # Register package 8 routes after router initialization.
 from routers import package8

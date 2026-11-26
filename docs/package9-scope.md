@@ -1,0 +1,3 @@
+# Package 9
+
+Video model deployment verified through portal. Text-to-video enabled using existing deployment; image-to-video deferred for input transport validation. Video attempts remain limited to two/day and five/month, not a billing cap. AG06 published per administrator report, Teams installation and legal URL correction remain. CU image result polling added; analyzer and multimodal semantics not verified. AG04/05/07/09/10, LG05, VS05/08 native enhancements remain incomplete; no new paid resources or inference during deployment. Review legal pages before publishing. Bot pricing is not verified here.
