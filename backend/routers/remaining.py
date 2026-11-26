@@ -15,9 +15,9 @@ GUIDES={
 
 'AG06':'Publish a native agent to Teams after tenant administrator approval.',
 'AG10':'Configure authenticated remote A2A agent cards and message endpoints.',
-'LG03':'Deploy a supported generative audio model after pricing approval.',
-'LG06':'Validate Voice Live model availability and streaming session authentication.',
-'VS03':'Confirm Sora model availability and approve video generation pricing.',
+'LG03':'Use /api/remaining/package8/audio.',
+'LG06':'Use /api/remaining/package8/voice.',
+'VS03':'Use /api/remaining/package8/video.',
 }
 class Request(BaseModel):
     exercise:str=Field(max_length=4)
@@ -198,3 +198,6 @@ def external_readiness(exercise: str, user=Depends(require_authorised_user)):
     if exercise not in details:
         raise HTTPException(404, 'Unknown external exercise')
     return {'exercise': exercise, 'status': 'blocked_pending_approval_or_compatibility', 'live_execution': False, 'inference_performed': False, **details[exercise]}
+
+# Register package 8 routes after router initialization.
+from routers import package8
