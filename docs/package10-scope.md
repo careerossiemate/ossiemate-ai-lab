@@ -1,0 +1,3 @@
+# Package 10 scoped native enhancements
+
+AG09 uses two real Agent Framework agents with explicit handoff; not a hosted workflow or orchestration builder. VS08 adds a separate synthetic vector index and hybrid search within the existing Search resource. VS03 supports optional synthetic PNG/JPEG data URI input, pending Azure partner gateway compatibility. Existing quota reservations are retained. No new billable resource provisioning, no inference during release. AG04/AG05/AG07/AG10/LG05/VS05 and semantic ranking/indexers remain incomplete. Teams installation and legal metadata verification remain deferred.

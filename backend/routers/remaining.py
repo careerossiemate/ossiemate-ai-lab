@@ -30,13 +30,13 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['LG05','AG04','AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['AG09','LG05','AG04','AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('LG05','AG04','AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('AG09','LG05','AG04','AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
         if eid=='AG04':
@@ -53,6 +53,12 @@ def run(body:Request,user=Depends(require_authorised_user)):
                     r=c.post('https://ossiemate-search-a37bf3fc.search.windows.net/knowledgebases/'+names[0]+'/retrieve',params={'api-version':'2025-11-01-preview'},json={'messages':[{'role':'user','content':[{'type':'text','text':body.prompt}]}]})
                     r.raise_for_status()
                     result={'knowledge_base':names[0],'retrieval':r.json(),'scope':'Native retrieval API; existing knowledge base only, no agent binding.'}
+        elif eid=='AG09':
+            if not body.prompt.strip(): raise HTTPException(422,'Enter a planning problem')
+            reserve_service('global-framework-multi','framework')
+            import asyncio
+            from routers.package10 import multi_agent
+            result=asyncio.run(asyncio.wait_for(multi_agent(body.prompt),110))
         elif eid=='LG05':
             if not body.prompt.strip(): raise HTTPException(422,'Enter speech text')
             reserve_service('global-speech-mcp','speechmcp')
@@ -110,15 +116,10 @@ def run(body:Request,user=Depends(require_authorised_user)):
                 if isinstance(msgs,list) and all(isinstance(m,dict) and m.get('role') in ('system','user','assistant') and isinstance(m.get('content'),str) and m['content'].strip() for m in msgs) and {'user','assistant'} <= {m['role'] for m in msgs}: valid+=1
             result={'rows':len(rows),'valid_rows':valid,'scope':'Local JSONL structure validation only; no training job submitted. Service minimum dataset size and pricing must be checked separately.'}
         elif eid=='VS08':
-            reserve_service(uid,'search')
-            endpoint='https://ossiemate-search-a37bf3fc.search.windows.net'; index='ai103-learning-samples'; params={'api-version':'2024-07-01'}
-            h=headers('https://search.azure.com/.default')
-            with httpx.Client(timeout=20,headers=h) as c:
-                r=c.put(endpoint+'/indexes/'+index,params=params,json={'name':index,'fields':[{'name':'id','type':'Edm.String','key':True},{'name':'content','type':'Edm.String','searchable':True}]}); r.raise_for_status()
-                r=c.post(endpoint+'/indexes/'+index+'/docs/index',params=params,json={'value':[{'@search.action':'mergeOrUpload','id':'1','content':'Solar panels generate electricity from sunlight.'},{'@search.action':'mergeOrUpload','id':'2','content':'Water treatment removes contaminants from drinking water.'}]}); r.raise_for_status()
-                if not all(x.get('status') for x in r.json().get('value',[])): raise HTTPException(502,'Index ingestion failed')
-                r=c.post(endpoint+'/indexes/'+index+'/docs/search',params=params,json={'search':body.prompt or '*','top':2,'queryType':'simple'}); r.raise_for_status()
-                result={'result':r.json(),'scope':'Live keyword search over two fixed sample documents; not full knowledge mining pipeline. Newly indexed documents may take time to appear.'}
+            if not body.prompt.strip(): raise HTTPException(422,'Enter a search question')
+            reserve_service('global-hybrid-search','search')
+            from routers.package10 import hybrid_search
+            result=hybrid_search(body.prompt)
         else:
             reserve_service(uid,'cu')
             raw=base64.b64decode(body.image,validate=True)

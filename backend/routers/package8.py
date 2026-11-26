@@ -111,7 +111,14 @@ def video(b:Input,user=Depends(require_authorised_user)):
     try:
         data={'model':VIDEO_DEPLOYMENT,'prompt':b.prompt,'duration':5,'resolution':'480P','prompt_expansion_mode':'disabled','aspect_ratio':'16:9'}
         route='text-to-video'
-        if b.image: raise HTTPException(422,'Image-to-video is deferred until input transport is verified')
+        if b.image:
+            try: raw=base64.b64decode(b.image,validate=True)
+            except ValueError: raise HTTPException(422,'Invalid image encoding') from None
+            if len(raw)>500000 or not ((b.mime=='image/png' and raw.startswith(b'\x89PNG\r\n\x1a\n')) or (b.mime=='image/jpeg' and raw.startswith(b'\xff\xd8\xff'))):
+                raise HTTPException(422,'Use a synthetic PNG or JPEG under 500 KB')
+            route='image-to-video'
+            data.pop('aspect_ratio',None)
+            data['image_url']='data:'+b.mime+';base64,'+b.image
         # Conservative allocation AUD 1 per attempted 5-second generation; no refunds.
         reserve('video-day',2,now().strftime('%Y%m%d'));reserve('video-month',5,now().strftime('%Y%m'))
         key=uuid4().hex; uid=user['user_id']
