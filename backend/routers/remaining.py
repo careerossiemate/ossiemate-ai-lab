@@ -186,3 +186,15 @@ def a2a_message(body:A2ARequest,user=Depends(require_authorised_user)):
     except HTTPException: raise
     except Exception as e: raise HTTPException(502,'A2A execution: '+type(e).__name__) from None
     finally: slots.release()
+
+@router.get('/external-readiness/{exercise}')
+def external_readiness(exercise: str, user=Depends(require_authorised_user)):
+    details = {
+        'AG06': {'required': 'Microsoft 365 tenant publishing approval and native agent publication', 'next': 'Verify tenant policy in Microsoft 365 admin center and publish from Foundry only after approval.'},
+        'LG03': {'required': 'Approved audio-capable model deployment', 'next': 'Check model catalog and deployment SKU; Azure Speech F0 is not a generative audio model.'},
+        'LG06': {'required': 'Approved Voice Live model and streaming authentication', 'next': 'Verify model availability, pricing and session authentication before enabling microphone streaming.'},
+        'VS03': {'required': 'Approved video-capable model deployment', 'next': 'Verify regional model availability and per-second pricing before submitting a video job.'},
+    }
+    if exercise not in details:
+        raise HTTPException(404, 'Unknown external exercise')
+    return {'exercise': exercise, 'status': 'blocked_pending_approval_or_compatibility', 'live_execution': False, 'inference_performed': False, **details[exercise]}
