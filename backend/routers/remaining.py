@@ -12,7 +12,7 @@ router=APIRouter(prefix='/api/remaining')
 LIMITS.update({'search':(10,2),'cu':(5,1),'flux':(3,1),'nativeagent':(3,1),'framework':(3,1),'mcpdemo':(3,1),'a2ademo':(3,1)})
 slots=BoundedSemaphore(1)
 GUIDES={
-'AG04':'Create a Foundry IQ knowledge base connected to the Search index.',
+
 'AG06':'Publish a native agent to Teams after tenant administrator approval.',
 'AG10':'Configure authenticated remote A2A agent cards and message endpoints.',
 'LG03':'Deploy a supported generative audio model after pricing approval.',
@@ -31,16 +31,22 @@ def headers(scope):
 
 @router.get('/capabilities')
 def capabilities(user=Depends(require_authorised_user)):
-    return {'experimental':['AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
+    return {'experimental':['AG04','AG03','AG08','AG01','VS02','VS08','VS04','VS05','VS06'],'local_validation':['05'],'blocked':GUIDES}
 
 @router.post('/run')
 def run(body:Request,user=Depends(require_authorised_user)):
     eid=body.exercise; uid=user['user_id']; start=perf_counter()
     if eid in GUIDES: raise HTTPException(503,GUIDES[eid])
-    if eid not in ('AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
+    if eid not in ('AG04','AG03','AG08','AG01','VS02','05','VS08','VS04','VS05','VS06'): raise HTTPException(404,'Unknown exercise')
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
-        if eid in ('AG03','AG08'):
+        if eid=='AG04':
+            reserve_service('global-knowledge-discovery','search')
+            with httpx.Client(timeout=20,headers=headers('https://search.azure.com/.default')) as c:
+                r=c.get('https://ossiemate-search-a37bf3fc.search.windows.net/knowledgebases',params={'api-version':'2025-11-01-preview'})
+                r.raise_for_status()
+                result={'knowledge_bases':[x.get('name') for x in r.json().get('value',[])], 'scope':'Read-only native knowledge base discovery; no knowledge base created or retrieval executed.'}
+        elif eid in ('AG03','AG08'):
             if not body.prompt.strip(): raise HTTPException(422,'Enter a question')
             import asyncio
             from routers.agent_tools import mcp_lookup, framework_run
@@ -156,8 +162,14 @@ def a2a_message(body:A2ARequest,user=Depends(require_authorised_user)):
     if not slots.acquire(False): raise HTTPException(429,'Service busy')
     try:
         reserve_service('global-a2a-budget','a2ademo')
-        response=get_foundry_client().responses.create(model=get_settings().model_deployment,input=msg.parts[0].text,instructions='Act as a risk advisor. Provide concise risk and mitigation advice. Identify uncertainty.',max_output_tokens=512,store=False)
-        return {'jsonrpc':'2.0','id':body.id,'result':{'kind':'message','role':'agent','messageId':uuid4().hex,'parts':[{'kind':'text','text':response.output_text}]}}
+        started=perf_counter()
+        response=get_foundry_client().responses.create(model=get_settings().model_deployment,input=msg.parts[0].text,instructions='Act as a risk advisor. Provide concise risk and mitigation advice. Identify uncertainty.',max_output_tokens=1536,store=False)
+        text=(response.output_text or '').strip()
+        usage=response.usage.model_dump() if response.usage else None
+        diagnostics={'status':response.status,'incomplete_reason':getattr(response.incomplete_details,'reason',None),'usage':usage,'duration_seconds':round(perf_counter()-started,3)}
+        if response.status!='completed' or not text:
+            return {'jsonrpc':'2.0','id':body.id,'error':{'code':-32001,'message':'Model did not complete a nonempty answer','data':diagnostics}}
+        return {'jsonrpc':'2.0','id':body.id,'result':{'kind':'message','role':'agent','messageId':uuid4().hex,'parts':[{'kind':'text','text':text}], 'metadata':diagnostics}}
     except HTTPException: raise
     except Exception as e: raise HTTPException(502,'A2A execution: '+type(e).__name__) from None
     finally: slots.release()
